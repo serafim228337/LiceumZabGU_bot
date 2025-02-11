@@ -1,64 +1,75 @@
 import os
 from aiogram import Router, F
-from aiogram.filters import Command
 from aiogram.types import Message
-from services.group_utils import GROUPS  # Импортируем общий список групп
+from aiogram.filters import Command
+from database.db import get_db
+from services.group_operations import add_group_to_db, get_all_groups
 
 router = Router()
 
+@router.message(Command("add_group"))
+async def add_group_handler(message: Message):
+    """
+    Команда: /add_group <chat_id> <group_name>
+    Добавляет группу в базу данных для последующей рассылки уведомлений.
+    """
+    admin_ids = os.getenv("ADMINS", "").split(",")
+    if str(message.from_user.id) not in admin_ids:
+        await message.answer("У вас нет прав для этой команды.")
+        return
+
+    parts = message.text.split(maxsplit=2)
+    if len(parts) < 3:
+        await message.answer("Использование: /add_group <chat_id> <group_name>")
+        return
+
+    chat_id = parts[1]
+    group_name = parts[2]
+
+    async for db in get_db():
+        group = await add_group_to_db(db, chat_id, group_name)
+        await message.answer(f"Группа {group.group_name} с chat_id {group.chat_id} добавлена.")
+
+@router.message(Command("list_groups"))
+async def list_groups_handler(message: Message):
+    """
+    Команда: /list_groups
+    Выводит список добавленных групп для уведомлений.
+    """
+    async for db in get_db():
+        groups = await get_all_groups(db)
+        if not groups:
+            await message.answer("Группы не найдены.")
+            return
+        response = "Добавленные группы:\n"
+        for group in groups:
+            response += f"{group.group_name} (chat_id: {group.chat_id})\n"
+        await message.answer(response)
+
 @router.message(Command("send_notification"))
-async def send_notification(message: Message):
+async def send_notification_handler(message: Message):
     """
-    Команда /send_notification <текст уведомления> отправляет уведомление во все добавленные группы.
-    Только администраторы (ID которых указаны в переменной ADMINS) могут использовать эту команду.
+    Команда: /send_notification <текст уведомления>
+    Отправляет уведомление во все добавленные группы.
     """
-    # Проверка прав администратора
-    if str(message.from_user.id) not in os.getenv("ADMINS").split(","):
+    admin_ids = os.getenv("ADMINS", "").split(",")
+    if str(message.from_user.id) not in admin_ids:
         await message.answer("У вас нет прав для использования этой команды.")
         return
 
-    # Извлекаем текст уведомления
     notification_text = message.text.replace("/send_notification", "").strip()
     if not notification_text:
         await message.answer("Введите текст уведомления после команды.")
         return
 
-    # Отправляем уведомление в каждую группу из списка GROUPS
-    for group in GROUPS:
-        try:
-            await message.bot.send_message(chat_id=group["chat_id"], text=notification_text)
-        except Exception as e:
-            print(f"Ошибка отправки уведомления группе {group['group_name']}: {e}")
-    await message.answer("Уведомления отправлены.")
-
-@router.message(F.text.startswith("/add_group"))
-async def add_group_handler(message: Message):
-    """
-    Команда /add_group <group_id> проверяет, состоит ли бот в указанной группе,
-    и если да, добавляет группу в общий список GROUPS.
-    """
-    try:
-        parts = message.text.split()
-        if len(parts) < 2:
-            await message.answer("Использование: /add_group <group_id>")
+    async for db in get_db():
+        groups = await get_all_groups(db)
+        if not groups:
+            await message.answer("Группы не найдены.")
             return
-
-        group_id = int(parts[1])
-        from services.group_utils import add_bot_to_group  # Импортируем функцию для проверки группы
-        await add_bot_to_group(group_id)
-        await message.answer("Проверка группы завершена. Проверьте консоль для подробностей.")
-    except Exception as e:
-        await message.answer(f"Ошибка: {e}")
-
-@router.message(F.text == "/list_groups")
-async def list_groups_handler(message: Message):
-    """
-    Команда /list_groups выводит список всех добавленных групп.
-    """
-    if not GROUPS:
-        await message.answer("Группы ещё не добавлены.")
-    else:
-        response = "Добавленные группы:\n"
-        for group in GROUPS:
-            response += f"{group['group_name']} (chat_id: {group['chat_id']})\n"
-        await message.answer(response)
+        for group in groups:
+            try:
+                await message.bot.send_message(chat_id=group.chat_id, text=notification_text)
+            except Exception as e:
+                print(f"Ошибка отправки уведомления группе {group.group_name}: {e}")
+        await message.answer("Уведомления отправлены.")

@@ -1,30 +1,25 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String
+from database.db import Base
 
-Base = declarative_base()
 
 class User(Base):
     __tablename__ = 'users'
-    user_id = Column(Integer, primary_key=True)
-    username = Column(String(50))
-    full_name = Column(String(100))
-    role = Column(String(20), default='user')
 
-class Olympiad(Base):
-    __tablename__ = 'olympiads'
-    olympiad_id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(100))
-    start_date = Column(DateTime)
+    # Поле id будет хранить Telegram user id
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=True)
+    full_name = Column(String(100), nullable=True)
 
-class Registration(Base):
-    __tablename__ = 'registrations'
-    registration_id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey('users.user_id'))
-    olympiad_id = Column(Integer, ForeignKey('olympiads.olympiad_id'))
+    def __repr__(self):
+        return f"<User id={self.id} username={self.username}>"
+
 
 class Group(Base):
     __tablename__ = 'groups'
+
     group_id = Column(Integer, primary_key=True, autoincrement=True)
-    chat_id = Column(String(50), unique=True)
-    group_name = Column(String(100))
+    chat_id = Column(String(50), unique=True, index=True)
+    group_name = Column(String(100), nullable=False)
+
+    def __repr__(self):
+        return f"<Group group_id={self.group_id} chat_id={self.chat_id} group_name={self.group_name}>"
