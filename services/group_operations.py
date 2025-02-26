@@ -19,3 +19,7 @@ async def add_group_to_db(db: AsyncSession, chat_id: str, group_name: str):
 async def get_all_groups(db: AsyncSession):
     result = await db.execute(select(Group))
     return result.scalars().all()
+
+async def get_groups_from_db(db: AsyncSession):
+    result = await db.execute(select(Group.chat_id))
+    return result.scalars().all()
