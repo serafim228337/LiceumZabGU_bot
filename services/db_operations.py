@@ -36,41 +36,30 @@ async def add_user_to_db(db: AsyncSession, user_id: int, username: str, full_nam
     return new_user
 
 
-async def update_user_profile(
-        db: AsyncSession,
-        user_id: int,
-        full_name: str,
-        phone_number: str,
-        role: str = None,  # Новая колонка для роли
-        class_number: str = None,  # Для учеников
-        class_letter: str = None,  # Для учеников
-        subjects: str = None  # Для учителей
-):
-    user = await get_user_by_id(db, user_id)
-    if user:
-        user.full_name = full_name
-        user.phone_number = phone_number
+async def update_user_profile(db: AsyncSession, user_id: int, full_name: str, class_number: str,
+                              class_letter: str, phone_number: str, role: str, subjects: str):
+    try:
+        # Запрос к базе данных для получения пользователя по user_id
+        result = await db.execute(select(User).filter(User.id == user_id))
+        user = result.scalar_one_or_none()
 
-        # Обновляем роль, если она передана
-        if role:
-            user.role = role
-
-        # Обновляем данные для учеников
-        if role == "1":  # Ученик
+        if user:
+            # Обновляем данные пользователя в базе данных
+            user.full_name = full_name
             user.class_number = class_number
             user.class_letter = class_letter
-            user.subjects = None  # Очищаем предметы, если они были
+            user.phone_number = phone_number
+            user.role = role
+            user.subjects = subjects  # Для учителей
 
-        # Обновляем данные для учителей
-        elif role == "3":  # Учитель
-            user.subjects = subjects
-            user.class_number = None  # Очищаем класс, если он был
-            user.class_letter = None  # Очищаем букву класса, если она была
+            # Применяем изменения в базе данных
+            await db.commit()
 
-        # Обновляем данные для родителей
-        elif role == "2":  # Родитель
-            user.class_number = None
-            user.class_letter = None
-            user.subjects = None
-
-        await db.commit()
+            return True
+        else:
+            # Если пользователя не найдено
+            return False
+    except Exception as e:
+        print(f"Ошибка обновления профиля: {e}")
+        await db.rollback()  # Откатываем изменения в случае ошибки
+        return False
