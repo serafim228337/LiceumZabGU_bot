@@ -1,19 +1,24 @@
 from datetime import datetime
 
 from aiogram import Bot
-from aiogram import Router, F
+from aiogram import F
+from aiogram import Router, types
+from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message
+from sqlalchemy import select
 
 from database.db import get_db
 from database.models import Event
+from database.models import Group
 from filters.is_admin import is_admin
 from keyboards.admin_panel import admin_panel
 from keyboards.all_kb import main_kb
-from services.group_operations import add_group_to_db, get_all_groups, get_groups_from_db
+from services.group_operations import get_all_groups, get_groups_from_db
+from services.notifications import send_forced_event_reminders
 
 router = Router()
 storage = MemoryStorage()
@@ -36,24 +41,45 @@ async def admin_panel_handler(message: Message):
     )
 
 
+@router.message(Command("send_reminders"))
+async def on_forced_reminder_command(message: Message, bot: Bot):
+    """Функция для обработки команды принудительной рассылки."""
+    if is_admin(message.from_user.id):
+        await send_forced_event_reminders(bot)
+        await message.answer("Принудительная рассылка напоминаний успешно выполнена!")
+    else:
+        await message.answer("У вас нет прав для выполнения этой команды.")
+
+
 @router.message(Command("add_group"))
-async def add_group_handler(message: Message):
-    if not is_admin(message.from_user.id):  # Проверка на админа
+async def add_group_handler(message: types.Message):
+    """Добавляет группу в базу данных."""
+    if not is_admin(message.from_user.id):
         await message.answer("У вас нет прав для этой команды.")
         return
 
-    parts = message.text.split(maxsplit=2)
-    if len(parts) < 3:
+    # Проверяем, отправлена ли команда в группе
+    if message.chat.type in (ChatType.GROUP, ChatType.SUPERGROUP):
+        chat_id = str(message.chat.id)
+        group_name = message.chat.title
+
+        async for db in get_db():
+            # Проверяем, есть ли группа в базе данных
+            group = await db.execute(select(Group).where(Group.chat_id == chat_id))
+            group = group.scalar_one_or_none()
+
+            if group:
+                await message.answer(f"Группа '{group_name}' уже добавлена.")
+            else:
+                # Добавляем группу в базу данных
+                new_group = Group(chat_id=chat_id, group_name=group_name)
+                db.add(new_group)
+                await db.commit()
+                await db.refresh(new_group)
+                await message.answer(f"Группа '{group_name}' добавлена в базу данных.")
+    else:
+        # Если команда отправлена в личном чате, запрашиваем данные вручную
         await message.answer("Использование: /add_group <chat_id> <group_name>")
-        return
-
-    chat_id = parts[1]
-    group_name = parts[2]
-
-    async for db in get_db():
-        group = await add_group_to_db(db, chat_id, group_name)
-        await message.answer(f"Группа {group.group_name} с chat_id {group.chat_id} добавлена.",
-                             reply_markup=admin_panel())
 
 
 @router.message(Command("list_groups"))

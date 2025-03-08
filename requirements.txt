@@ -1,4 +1,7 @@
-aiogram==3.0.0b7
+aiogram~=3.17.0
 asyncmy
-SQLAlchemy
-python-dotenv
+SQLAlchemy~=2.0.38
+python-dotenv~=1.0.1
+
+APScheduler~=3.11.0
+pytz~=2025.1

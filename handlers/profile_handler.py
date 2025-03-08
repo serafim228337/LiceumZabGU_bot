@@ -31,16 +31,22 @@ async def profile_handler(message: Message, state: FSMContext):
         else:
             profile_text = "Данные профиля отсутствуют."
 
-        update_button = InlineKeyboardButton(text="Обновить данные профиля", callback_data="update_profile")
-        inline_kb = InlineKeyboardMarkup(inline_keyboard=[[update_button]])
+        inline_kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Обновить данные", callback_data="update_profile")]
+        ])
 
         await message.answer(profile_text, reply_markup=inline_kb)
 
-@router.callback_query(F.data == "update_profile")
+@router.callback_query()
+async def debug_callback(callback: CallbackQuery):
+    print(f"Received callback data: {callback.data}")
+    await callback.answer()
+
+@router.callback_query(lambda c: c.data == "update_profile")
 async def update_profile_callback(callback_query: CallbackQuery, state: FSMContext):
+    await callback_query.answer("Вы начали обновление профиля.")  # Подтверждение нажатия
     await callback_query.message.answer("Введите ваше ФИО:")
     await state.set_state(UserProfileState.waiting_for_full_name)
-    await callback_query.answer()
 
 @router.message(UserProfileState.waiting_for_full_name)
 async def process_full_name(message: Message, state: FSMContext):

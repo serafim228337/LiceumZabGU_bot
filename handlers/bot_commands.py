@@ -20,7 +20,8 @@ admin_commands = [
     BotCommand(command="add_group", description="Добавить группу"),
     BotCommand(command="list_groups", description="Список групп"),
     BotCommand(command="send_message", description="Разослать сообщение"),
-    BotCommand(command="add_event", description="Добавить событие")
+    BotCommand(command="add_event", description="Добавить событие"),
+    BotCommand(command="send_reminders", description="Разослать уведомление о предстоящем событии")
 ]
 
 async def set_commands(bot: Bot):

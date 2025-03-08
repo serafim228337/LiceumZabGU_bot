@@ -5,13 +5,14 @@ from database.db import Base
 class User(Base):
     __tablename__ = 'users'
 
-    # Поле id будет хранить Telegram user id
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=True)
     full_name = Column(String(100), nullable=True)
     class_number = Column(String, index=True)
     class_letter = Column(String, index=True)
     phone_number = Column(String, index=True)
+    role = Column(String, nullable=True)
+
 
     def __repr__(self):
         return f"<User id={self.id} username={self.username}>"
