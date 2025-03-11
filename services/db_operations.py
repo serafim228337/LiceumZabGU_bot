@@ -28,16 +28,27 @@ async def get_user_by_id(db: AsyncSession, user_id: int):
     return result.scalar_one_or_none()
 
 
-async def add_user_to_db(db: AsyncSession, user_id: int, username: str, full_name: str):
-    new_user = User(id=user_id, username=username, full_name=full_name)
-    db.add(new_user)
-    await db.commit()
-    await db.refresh(new_user)
-    return new_user
+async def add_user_to_db(db, user_id, username, full_name):
+    existing_user = await db.get(User, user_id)
+
+    if existing_user:
+        # Обновляем существующего пользователя
+        existing_user.username = username
+        existing_user.full_name = full_name
+        await db.commit()
+        await db.refresh(existing_user)
+        return existing_user
+    else:
+        # Создаем нового пользователя
+        new_user = User(id=user_id, username=username, full_name=full_name)
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+        return new_user
 
 
 async def update_user_profile(db: AsyncSession, user_id: int, full_name: str, class_number: str,
-                              class_letter: str, phone_number: str, role: str, subjects: str):
+                              class_letter: str, contact_info: str, role: str, subjects: str):
     try:
         # Запрос к базе данных для получения пользователя по user_id
         result = await db.execute(select(User).filter(User.id == user_id))
@@ -48,7 +59,7 @@ async def update_user_profile(db: AsyncSession, user_id: int, full_name: str, cl
             user.full_name = full_name
             user.class_number = class_number
             user.class_letter = class_letter
-            user.phone_number = phone_number
+            user.contact_info = contact_info
             user.role = role
             user.subjects = subjects  # Для учителей
 

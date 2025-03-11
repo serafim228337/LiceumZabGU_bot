@@ -18,9 +18,6 @@ logger = logging.getLogger(__name__)
 router = Router()
 
 
-
-
-
 @router.message(Command("start"))
 async def start(message: Message):
     user_id = message.from_user.id
@@ -37,7 +34,8 @@ async def start(message: Message):
 
         await message.answer(
             response,
-            reply_markup=main_kb(message.from_user.id))
+            reply_markup=main_kb(message.from_user.id)
+        )
 
 
 @router.message(Command("schedule"))

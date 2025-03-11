@@ -1,17 +1,17 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, BigInteger, String, DateTime, Boolean, Integer
 from database.db import Base
 
 
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=True)
     full_name = Column(String(100), nullable=True)
-    class_number = Column(String, index=True)
-    class_letter = Column(String, index=True)
-    phone_number = Column(String, index=True)
-    role = Column(String, nullable=True)
+    class_number = Column(String(10), index=True)
+    class_letter = Column(String(1), index=True)
+    contact_info = Column(String(255), nullable=True)
+    role = Column(String(50), nullable=True)
 
 
     def __repr__(self):

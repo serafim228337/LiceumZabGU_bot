@@ -16,9 +16,14 @@ class UserProfileState(StatesGroup):
     waiting_for_full_name = State()
     waiting_for_class = State()
     waiting_for_class_letter = State()
-    waiting_for_phone_number = State()
-    waiting_for_subjects = State()  # Новый шаг для предметов учителя
+    waiting_for_subjects = State()
+    waiting_for_contact_info = State()
 
+# Функция обработки команды /cancel
+@router.message(F.text == "/cancel")
+async def cancel_handler(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Заполнение профиля отменено.", reply_markup=main_kb(message.from_user.id))
 
 @router.message(F.text == "👤 Профиль")
 async def profile_handler(message: Message, state: FSMContext):
@@ -28,13 +33,13 @@ async def profile_handler(message: Message, state: FSMContext):
             role = user.role.capitalize() if user.role else "Не указана"  # Проверка роли
             class_number = user.class_number if user.role == 'ученик' else 'N/A'
             class_letter = user.class_letter if user.role == 'ученик' else 'N/A'
-            phone_number = user.phone_number if user.phone_number else 'Не указан'
+            contact_info = user.contact_info if user.contact_info else 'Не указан'
 
             profile_text = (
                 f"ФИО: {user.full_name}\n"
                 f"Класс: {class_number}\n"
-                f"Буква класса: {class_letter}\n"
-                f"Номер телефона: {phone_number}\n"
+                f"Буква класса: {class_letter}\n" 
+                f"Контактные данные: {contact_info}\n"
                 f"Роль: {role}\n"
             )
         else:
@@ -52,7 +57,8 @@ async def update_profile_callback(message: Message, state: FSMContext):
     role_button_1 = KeyboardButton(text="Учитель")
     role_button_2 = KeyboardButton(text="Ученик")
     role_button_3 = KeyboardButton(text="Родитель")
-    role_kb = ReplyKeyboardMarkup(keyboard=[[role_button_1], [role_button_2], [role_button_3]], resize_keyboard=True)
+    cancel_button = KeyboardButton(text="/cancel")
+    role_kb = ReplyKeyboardMarkup(keyboard=[[role_button_1], [role_button_2], [role_button_3], [cancel_button]], resize_keyboard=True)
 
     await message.answer("Выберите вашу роль (Учитель, Ученик, Родитель):", reply_markup=role_kb)
     await state.set_state(UserProfileState.waiting_for_role)
@@ -67,9 +73,17 @@ async def process_role(message: Message, state: FSMContext):
     elif role == "родитель":
         # Запрашиваем номер телефона с кнопкой пропуска
         skip_button = KeyboardButton(text="Пропустить")
-        phone_kb = ReplyKeyboardMarkup(keyboard=[[skip_button]], resize_keyboard=True)
-        await message.answer("Введите ваш номер телефона (можно пропустить):", reply_markup=phone_kb)
-        await state.set_state(UserProfileState.waiting_for_phone_number)
+        cancel_button = KeyboardButton(text="/cancel")
+        contact_kb = ReplyKeyboardMarkup(keyboard=[[skip_button], [cancel_button]], resize_keyboard=True)
+        await message.answer(
+            "Введите ваши контактные данные. Это может быть:\n"
+            "- Номер телефона\n"
+            "- Telegram-аккаунт\n"
+            "- Ссылка на ВКонтакте\n"
+            "- Адрес электронной почты",
+            reply_markup=contact_kb
+        )
+        await state.set_state(UserProfileState.waiting_for_contact_info)
     elif role == "учитель":
         await message.answer("Введите ваше ФИО:", reply_markup=ReplyKeyboardRemove())  # Скрываем клавиатуру
         await state.set_state(UserProfileState.waiting_for_full_name)
@@ -93,7 +107,8 @@ async def process_full_name(message: Message, state: FSMContext):
             [KeyboardButton(text="8"), KeyboardButton(text="9")],
             [KeyboardButton(text="10"), KeyboardButton(text="11")]
         ]
-        class_kb = ReplyKeyboardMarkup(keyboard=class_buttons, resize_keyboard=True)
+        cancel_button = KeyboardButton(text="/cancel")
+        class_kb = ReplyKeyboardMarkup(keyboard=class_buttons + [[cancel_button]], resize_keyboard=True)
         await message.answer("Выберите ваш класс:", reply_markup=class_kb)
         await state.set_state(UserProfileState.waiting_for_class)
 
@@ -107,7 +122,8 @@ async def process_class(message: Message, state: FSMContext):
         [KeyboardButton(text="А"), KeyboardButton(text="Б")],
         [KeyboardButton(text="В"), KeyboardButton(text="Г")]
     ]
-    class_letter_kb = ReplyKeyboardMarkup(keyboard=class_letter_buttons, resize_keyboard=True)
+    cancel_button = KeyboardButton(text="/cancel")
+    class_letter_kb = ReplyKeyboardMarkup(keyboard=class_letter_buttons + [[cancel_button]], resize_keyboard=True)
     await message.answer("Выберите букву вашего класса:", reply_markup=class_letter_kb)
     await state.set_state(UserProfileState.waiting_for_class_letter)
 
@@ -118,15 +134,24 @@ async def process_class_letter(message: Message, state: FSMContext):
 
     # Запрашиваем номер телефона с кнопкой пропуска
     skip_button = KeyboardButton(text="Пропустить")
-    phone_kb = ReplyKeyboardMarkup(keyboard=[[skip_button]], resize_keyboard=True)
-    await message.answer("Введите ваш номер телефона (можно пропустить):", reply_markup=phone_kb)
-    await state.set_state(UserProfileState.waiting_for_phone_number)
+    cancel_button = KeyboardButton(text="/cancel")
+    contact_kb = ReplyKeyboardMarkup(keyboard=[[skip_button], [cancel_button]], resize_keyboard=True)
+    await message.answer(
+        "Введите ваши контактные данные. Это может быть:\n"
+        "- Номер телефона\n"
+        "- Telegram-аккаунт\n"
+        "- Ссылка на ВКонтакте\n"
+        "- Адрес электронной почты",
+        reply_markup=contact_kb
+    )
+    await state.set_state(UserProfileState.waiting_for_contact_info)
 
-@router.message(UserProfileState.waiting_for_phone_number)
-async def process_phone_number(message: Message, state: FSMContext):
-    phone_number = message.text.strip() if message.text and message.text != "Пропустить" else None  # Если "Пропустить", оставляем номер как None
 
-    await state.update_data(phone_number=phone_number)
+@router.message(UserProfileState.waiting_for_contact_info)
+async def process_contact_info(message: Message, state: FSMContext):
+    contact_info = message.text.strip() if message.text and message.text != "Пропустить" else None  # Если "Пропустить", оставляем как None
+
+    await state.update_data(contact_info=contact_info)
 
     # Переходим к следующему шагу
     user_data = await state.get_data()
@@ -150,13 +175,13 @@ async def save_user_profile(message: Message, state: FSMContext):
     full_name = user_data.get('full_name')
     class_number = user_data.get('class_number')
     class_letter = user_data.get('class_letter')
-    phone_number = user_data.get('phone_number')
+    contact_info = user_data.get('contact_info')
     subjects = user_data.get('subjects')
 
     # Сохраняем данные в базу данных
     async for db in get_db():
-        print(db, message.from_user.id, full_name, class_number, class_letter, phone_number, role, subjects)
-        await update_user_profile(db, message.from_user.id, full_name, class_number, class_letter, phone_number, role, subjects)
+        print(db, message.from_user.id, full_name, class_number, class_letter, contact_info, role, subjects)
+        await update_user_profile(db, message.from_user.id, full_name, class_number, class_letter, contact_info, role, subjects)
 
     await message.answer("Ваш профиль успешно обновлен!", reply_markup=main_kb(message.from_user.id))
     await state.clear()
