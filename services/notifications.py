@@ -1,19 +1,20 @@
-import pytz
 import logging
 from datetime import datetime, timedelta
+
+import pytz
 from aiogram import Bot
-from database.db import get_db
-from database.models import Event, Group
 from sqlalchemy import select
 
-# Логгирование для отладки
+from database.db import get_db
+from database.models import Event, Group
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Часовой пояс GMT+9 (Asia/Tokyo)
 JST = pytz.timezone('Asia/Tokyo')
 
-# Функция для отправки напоминаний о событиях
+
 async def send_event_reminders(bot: Bot):
     """Функция для отправки напоминаний о событиях."""
     async for db in get_db():
@@ -26,7 +27,6 @@ async def send_event_reminders(bot: Bot):
             # Устанавливаем время напоминания на 20:00 по GMT+9
             reminder_time = jst_time.replace(hour=20, minute=0, second=0, microsecond=0)
 
-            # Если текущее время уже позже 20:00, отправляем напоминание все равно в тот же день
             if jst_time >= reminder_time and jst_time < reminder_time + timedelta(days=1):
                 reminder_time = jst_time  # Отправляем в 20:00 текущего дня
 
@@ -65,26 +65,23 @@ async def send_event_reminders(bot: Bot):
         except Exception as e:
             logger.error(f"Ошибка при выполнении функции send_event_reminders: {e}")
 
-# Функция для принудительной рассылки напоминаний
+
 async def send_forced_event_reminders(bot: Bot):
     """Функция для принудительной рассылки напоминаний."""
     async for db in get_db():
         try:
-            # Текущее время в JST
             now = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(JST)
 
-            # Начало завтрашнего дня (00:00:00)
             start_of_tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
 
-            # Конец завтрашнего дня (23:59:59)
             end_of_tomorrow = start_of_tomorrow + timedelta(days=1, microseconds=-1)
 
             # Получаем события, которые начнутся завтра
             events = await db.execute(
                 select(Event).where(
                     Event.date.between(
-                        start_of_tomorrow,  # Начало завтрашнего дня
-                        end_of_tomorrow     # Конец завтрашнего дня
+                        start_of_tomorrow,
+                        end_of_tomorrow
                     )
                 )
             )

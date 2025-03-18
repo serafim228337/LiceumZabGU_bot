@@ -4,18 +4,18 @@ from functools import partial
 
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.enums import UpdateType  # Добавляем импорт
+from aiogram.enums import UpdateType
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
-import logging  # Добавляем логирование
+import logging
 
 from database.db import init_db
 
 from handlers.bot_commands import set_commands
 from handlers import user_router, admin_router, profile_handler
-from services.scheduler import send_event_reminders
+from services.notifications import send_event_reminders
 
-# Настраиваем логирование
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ async def main():
     await init_db()
     await set_commands(bot)
 
-    # Подключаем обработчики (роутеры)
+    #роутеры
     dp.include_router(user_router)
     dp.include_router(admin_router)
     dp.include_router(profile_handler.router)
@@ -43,7 +43,7 @@ async def main():
     )
     scheduler.start()
 
-    # Указываем типы обновлений явно
+    # Указываем типы обновлений
     await dp.start_polling(bot, allowed_updates=[UpdateType.MESSAGE, UpdateType.CHAT_MEMBER])
 
 if __name__ == '__main__':

@@ -39,3 +39,4 @@ class Event(Base):
 
     def __repr__(self):
         return f"<Event {self.title} ({self.date})>"
+

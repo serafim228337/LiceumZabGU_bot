@@ -1,5 +1,7 @@
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+
 from filters.is_admin import admins
+
 
 def main_kb(user_telegram_id: int):
     kb_list = [
@@ -17,9 +19,11 @@ def main_kb(user_telegram_id: int):
     )
     return keyboard
 
+
 def catalog_kb():
     kb_list = [
         [KeyboardButton(text="Учителя")],
+        [KeyboardButton(text="Предстоящие события")],
         [KeyboardButton(text="Главное меню")]
     ]
     keyboard = ReplyKeyboardMarkup(
@@ -29,3 +33,13 @@ def catalog_kb():
         input_field_placeholder="Выберите опцию каталога:"
     )
     return keyboard
+
+
+def skip_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Пропустить")],
+            [KeyboardButton(text="/cancel")]
+        ],
+        resize_keyboard=True
+    )

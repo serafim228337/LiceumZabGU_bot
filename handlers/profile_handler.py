@@ -5,20 +5,11 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 
 from database.db import get_db
 from keyboards.all_kb import main_kb
+from keyboards.all_kb import skip_keyboard
 from services.db_operations import get_user_by_id, update_user_profile
 
 # Создаем роутер
 router = Router()
-
-
-def skip_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="Пропустить")],
-            [KeyboardButton(text="/cancel")]
-        ],
-        resize_keyboard=True
-    )
 
 
 # Создаем состояния для ожидания данных профиля
@@ -76,7 +67,7 @@ async def return_to_main_menu(message: Message, state: FSMContext):
 
 @router.message(F.text == "Обновить данные профиля")
 async def update_profile_callback(message: Message, state: FSMContext):
-    # Запрашиваем роль пользователя (без возможности пропуска, выбор обязателен)
+    # Запрашиваем роль пользователя
     role_button_1 = KeyboardButton(text="Учитель")
     role_button_2 = KeyboardButton(text="Ученик")
     role_button_3 = KeyboardButton(text="Родитель")
@@ -128,8 +119,7 @@ async def skip_full_name(message: Message, state: FSMContext):
             [KeyboardButton(text="8"), KeyboardButton(text="9")],
             [KeyboardButton(text="10"), KeyboardButton(text="11")]
         ]
-        cancel_button = KeyboardButton(text="/cancel")
-        class_kb = ReplyKeyboardMarkup(keyboard=class_buttons + [[cancel_button], [KeyboardButton(text="Пропустить")]],
+        class_kb = ReplyKeyboardMarkup(keyboard=class_buttons + skip_keyboard(),
                                        resize_keyboard=True)
         await message.answer("Выберите ваш класс или нажмите 'Пропустить':", reply_markup=class_kb)
         await state.set_state(UserProfileState.waiting_for_class)
@@ -148,8 +138,7 @@ async def process_full_name(message: Message, state: FSMContext):
             [KeyboardButton(text="8"), KeyboardButton(text="9")],
             [KeyboardButton(text="10"), KeyboardButton(text="11")]
         ]
-        cancel_button = KeyboardButton(text="/cancel")
-        class_kb = ReplyKeyboardMarkup(keyboard=class_buttons + [[cancel_button], [KeyboardButton(text="Пропустить")]],
+        class_kb = ReplyKeyboardMarkup(keyboard=class_buttons + skip_keyboard(),
                                        resize_keyboard=True)
         await message.answer("Выберите ваш класс или нажмите 'Пропустить':", reply_markup=class_kb)
         await state.set_state(UserProfileState.waiting_for_class)
@@ -159,14 +148,12 @@ async def process_full_name(message: Message, state: FSMContext):
 @router.message(UserProfileState.waiting_for_class, F.text == "Пропустить")
 async def skip_class(message: Message, state: FSMContext):
     await state.update_data(class_number=None)
-    # Переходим к выбору буквы класса
     class_letter_buttons = [
         [KeyboardButton(text="А"), KeyboardButton(text="Б")],
         [KeyboardButton(text="В"), KeyboardButton(text="Г")]
     ]
-    cancel_button = KeyboardButton(text="/cancel")
     class_letter_kb = ReplyKeyboardMarkup(
-        keyboard=class_letter_buttons + [[cancel_button], [KeyboardButton(text="Пропустить")]], resize_keyboard=True)
+        keyboard=class_letter_buttons + skip_keyboard(), resize_keyboard=True)
     await message.answer("Выберите букву вашего класса", reply_markup=class_letter_kb)
     await state.set_state(UserProfileState.waiting_for_class_letter)
 
@@ -178,9 +165,9 @@ async def process_class(message: Message, state: FSMContext):
         [KeyboardButton(text="А"), KeyboardButton(text="Б")],
         [KeyboardButton(text="В"), KeyboardButton(text="Г")]
     ]
-    cancel_button = KeyboardButton(text="/cancel")
+
     class_letter_kb = ReplyKeyboardMarkup(
-        keyboard=class_letter_buttons + [[cancel_button], [KeyboardButton(text="Пропустить")]], resize_keyboard=True)
+        keyboard=class_letter_buttons + skip_keyboard(), resize_keyboard=True)
     await message.answer("Выберите букву вашего класса", reply_markup=class_letter_kb)
     await state.set_state(UserProfileState.waiting_for_class_letter)
 
@@ -265,7 +252,6 @@ async def save_user_profile(message: Message, state: FSMContext):
             class_letter = current_user.class_letter
         if contact_info is None:
             contact_info = current_user.contact_info
-        # Если subjects не указаны, проверяем наличие текущего значения (если поле существует)
         if subjects is None and hasattr(current_user, "subjects"):
             subjects = current_user.subjects
 

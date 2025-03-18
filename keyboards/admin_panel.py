@@ -3,9 +3,9 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 def admin_panel():
     admin_kb_list = [
-        [KeyboardButton(text="/add_group"), KeyboardButton(text="/list_groups")],
-        [KeyboardButton(text="/send_message"), KeyboardButton(text="/add_event")],
-        [KeyboardButton(text="На главную")]
+        [KeyboardButton(text="Добавить группу"), KeyboardButton(text="Список групп")],
+        [KeyboardButton(text="Разослать сообщение"), KeyboardButton(text="Добавить событие")],
+        [KeyboardButton(text="Разослать уведомление о предстоящем событии"), KeyboardButton(text="На главную")]
     ]
     admin_kb = ReplyKeyboardMarkup(
         keyboard=admin_kb_list,
@@ -14,3 +14,4 @@ def admin_panel():
         is_persistent=True
     )
     return admin_kb
+

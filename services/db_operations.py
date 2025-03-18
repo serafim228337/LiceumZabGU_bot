@@ -8,7 +8,7 @@ from database.models import User
 
 
 async def get_events_for_tomorrow(db: AsyncSession):
-    """Получает события, запланированные на завтра."""
+    """События, запланированные на завтра."""
     tomorrow = (datetime.now() + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     day_after_tomorrow = tomorrow + timedelta(days=1)
     query = select(Event).where(Event.date >= tomorrow, Event.date < day_after_tomorrow)
@@ -68,7 +68,6 @@ async def update_user_profile(db: AsyncSession, user_id: int, full_name: str, cl
 
             return True
         else:
-            # Если пользователя не найдено
             return False
     except Exception as e:
         print(f"Ошибка обновления профиля: {e}")

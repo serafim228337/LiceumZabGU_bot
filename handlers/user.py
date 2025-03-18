@@ -68,6 +68,12 @@ async def about_us(message: Message):
     await message.answer("Полезные ссылки:", reply_markup=inline_kb)
 
 
+@router.message(F.text == "Каталог")
+async def show_catalog(message: Message):
+    # Отправляем новую клавиатуру каталога
+    await message.answer("Выберите опцию каталога:", reply_markup=catalog_kb())
+
+
 @router.message(Command("events"))
 async def show_events(message: Message):
     async for db in get_db():
@@ -88,10 +94,24 @@ async def show_events(message: Message):
         await message.answer(response)
 
 
-@router.message(F.text == "Каталог")
-async def show_catalog(message: Message):
-    # Отправляем новую клавиатуру каталога
-    await message.answer("Выберите опцию каталога:", reply_markup=catalog_kb())
+@router.message(F.text == "Предстоящие события")
+async def show_events_text(message: Message):
+    async for db in get_db():
+        events = await db.execute(select(Event).where(Event.date >= datetime.now()).order_by(Event.date))
+        events = events.scalars().all()
+
+        if not events:
+            await message.answer("Предстоящих событий нет.")
+            return
+
+        response = "Предстоящие события:\n"
+        for event in events:
+            response += (
+                f"📅 {event.title}\n"
+                f"📝 {event.description}\n"
+                f"⏰ {event.date.strftime('%Y-%m-%d %H:%M')}\n\n"
+            )
+        await message.answer(response)
 
 
 @router.message(F.text == "Учителя")

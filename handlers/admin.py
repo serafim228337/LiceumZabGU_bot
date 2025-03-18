@@ -46,13 +46,54 @@ async def on_forced_reminder_command(message: Message, bot: Bot):
     """Функция для обработки команды принудительной рассылки."""
     if is_admin(message.from_user.id):
         await send_forced_event_reminders(bot)
-        await message.answer("Принудительная рассылка напоминаний успешно выполнена!")
+        await message.answer("Напоминание успешно отправлено!")
+    else:
+        await message.answer("У вас нет прав для выполнения этой команды.")
+
+
+@router.message(F.text == "Разослать уведомление о предстоящем событии")
+async def on_forced_reminder_command_text(message: Message, bot: Bot):
+    """Функция для обработки команды принудительной рассылки."""
+    if is_admin(message.from_user.id):
+        await send_forced_event_reminders(bot)
+        await message.answer("Напоминание успешно отправлено!")
     else:
         await message.answer("У вас нет прав для выполнения этой команды.")
 
 
 @router.message(Command("add_group"))
 async def add_group_handler(message: types.Message):
+    """Добавляет группу в базу данных."""
+    if not is_admin(message.from_user.id):
+        await message.answer("У вас нет прав для этой команды.")
+        return
+
+    # Проверяем, отправлена ли команда в группе
+    if message.chat.type in (ChatType.GROUP, ChatType.SUPERGROUP):
+        chat_id = str(message.chat.id)
+        group_name = message.chat.title
+
+        async for db in get_db():
+            # Проверяем, есть ли группа в базе данных
+            group = await db.execute(select(Group).where(Group.chat_id == chat_id))
+            group = group.scalar_one_or_none()
+
+            if group:
+                await message.answer(f"Группа '{group_name}' уже добавлена.")
+            else:
+                # Добавляем группу в базу данных
+                new_group = Group(chat_id=chat_id, group_name=group_name)
+                db.add(new_group)
+                await db.commit()
+                await db.refresh(new_group)
+                await message.answer(f"Группа '{group_name}' добавлена в базу данных.")
+    else:
+        # Если команда отправлена в личном чате, запрашиваем данные вручную
+        await message.answer("Использование: /add_group <chat_id> <group_name>")
+
+
+@router.message(F.text == "Добавить группу")
+async def add_group_handler_text(message: types.Message):
     """Добавляет группу в базу данных."""
     if not is_admin(message.from_user.id):
         await message.answer("У вас нет прав для этой команды.")
@@ -99,8 +140,35 @@ async def list_groups_handler(message: Message):
         await message.answer(response, reply_markup=admin_panel())
 
 
+@router.message(F.text == "Список групп")
+async def list_groups_handler_text(message: Message):
+    if not is_admin(message.from_user.id):  # Проверка на админа
+        await message.answer("У вас нет прав для этой команды.")
+        return
+
+    async for db in get_db():
+        groups = await get_all_groups(db)
+        if not groups:
+            await message.answer("Группы не найдены.")
+            return
+        response = "Добавленные группы:\n"
+        for group in groups:
+            response += f"{group.group_name} (chat_id: {group.chat_id})\n"
+        await message.answer(response, reply_markup=admin_panel())
+
+
 @router.message(Command("send_message"))
 async def send_message_command(message: Message, state: FSMContext):
+    if not is_admin(message.from_user.id):
+        await message.answer("У вас нет прав для выполнения этой команды.")
+        return
+
+    await message.answer("Отправьте сообщение, которое нужно разослать по группам:")
+    await state.set_state(SendMessageState.waiting_for_message)
+
+
+@router.message(F.text == "Разослать сообщение")
+async def send_message_command_text(message: Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         await message.answer("У вас нет прав для выполнения этой команды.")
         return
@@ -144,6 +212,12 @@ class AddEventState(StatesGroup):
 
 @router.message(Command("add_event"))
 async def add_event_start(message: Message, state: FSMContext):
+    await message.answer("Введите название события:")
+    await state.set_state(AddEventState.waiting_for_title)
+
+
+@router.message(F.text == "Добавить событие")
+async def add_event_start_text(message: Message, state: FSMContext):
     await message.answer("Введите название события:")
     await state.set_state(AddEventState.waiting_for_title)
 
