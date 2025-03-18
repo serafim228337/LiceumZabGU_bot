@@ -5,7 +5,7 @@ from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
 
 from database.db import get_db
 from keyboards.all_kb import main_kb
-from keyboards.all_kb import skip_keyboard
+from keyboards.all_kb import skip_kb
 from services.db_operations import get_user_by_id, update_user_profile
 
 # Создаем роутер
@@ -84,7 +84,7 @@ async def process_role(message: Message, state: FSMContext):
     await state.update_data(role=role)
     if role == "ученик":
         await message.answer("Введите ваше ФИО или нажмите 'Пропустить' для сохранения текущего значения:",
-                             reply_markup=skip_keyboard())
+                             reply_markup=skip_kb())
         await state.set_state(UserProfileState.waiting_for_full_name)
     elif role == "родитель":
         # Запрашиваем контактные данные с возможностью пропуска
@@ -95,12 +95,12 @@ async def process_role(message: Message, state: FSMContext):
             "- Ссылка на ВКонтакте\n"
             "- Адрес электронной почты\n"
             "Или нажмите 'Пропустить', если данные не меняются.",
-            reply_markup=skip_keyboard()
+            reply_markup=skip_kb()
         )
         await state.set_state(UserProfileState.waiting_for_contact_info)
     elif role == "учитель":
         await message.answer("Введите ваше ФИО или нажмите 'Пропустить' для сохранения текущего значения:",
-                             reply_markup=skip_keyboard())
+                             reply_markup=skip_kb())
         await state.set_state(UserProfileState.waiting_for_full_name)
 
 
@@ -111,17 +111,10 @@ async def skip_full_name(message: Message, state: FSMContext):
     user_data = await state.get_data()
     role = user_data['role']
     if role == "учитель":
-        await message.answer("Введите ваши предметы через запятую", reply_markup=skip_keyboard())
+        await message.answer("Введите ваши предметы через запятую", reply_markup=skip_kb())
         await state.set_state(UserProfileState.waiting_for_subjects)
     else:
-        # Для ученика переходим к выбору класса
-        class_buttons = [
-            [KeyboardButton(text="8"), KeyboardButton(text="9")],
-            [KeyboardButton(text="10"), KeyboardButton(text="11")]
-        ]
-        class_kb = ReplyKeyboardMarkup(keyboard=class_buttons + skip_keyboard(),
-                                       resize_keyboard=True)
-        await message.answer("Выберите ваш класс или нажмите 'Пропустить':", reply_markup=class_kb)
+        await message.answer("Выберите ваш класс или нажмите 'Пропустить':", reply_markup=skip_kb("8", "9", "10", "11"))
         await state.set_state(UserProfileState.waiting_for_class)
 
 
@@ -131,16 +124,10 @@ async def process_full_name(message: Message, state: FSMContext):
     user_data = await state.get_data()
     role = user_data['role']
     if role == "учитель":
-        await message.answer("Введите ваши предметы через запятую", reply_markup=skip_keyboard())
+        await message.answer("Введите ваши предметы через запятую", reply_markup=skip_kb())
         await state.set_state(UserProfileState.waiting_for_subjects)
     else:
-        class_buttons = [
-            [KeyboardButton(text="8"), KeyboardButton(text="9")],
-            [KeyboardButton(text="10"), KeyboardButton(text="11")]
-        ]
-        class_kb = ReplyKeyboardMarkup(keyboard=class_buttons + skip_keyboard(),
-                                       resize_keyboard=True)
-        await message.answer("Выберите ваш класс или нажмите 'Пропустить':", reply_markup=class_kb)
+        await message.answer("Выберите ваш класс или нажмите 'Пропустить':", reply_markup=skip_kb("8", "9", "10", "11"))
         await state.set_state(UserProfileState.waiting_for_class)
 
 
@@ -148,27 +135,14 @@ async def process_full_name(message: Message, state: FSMContext):
 @router.message(UserProfileState.waiting_for_class, F.text == "Пропустить")
 async def skip_class(message: Message, state: FSMContext):
     await state.update_data(class_number=None)
-    class_letter_buttons = [
-        [KeyboardButton(text="А"), KeyboardButton(text="Б")],
-        [KeyboardButton(text="В"), KeyboardButton(text="Г")]
-    ]
-    class_letter_kb = ReplyKeyboardMarkup(
-        keyboard=class_letter_buttons + skip_keyboard(), resize_keyboard=True)
-    await message.answer("Выберите букву вашего класса", reply_markup=class_letter_kb)
+    await message.answer("Выберите букву класса:", reply_markup=skip_kb("А", "Б", "В", "Г"))
     await state.set_state(UserProfileState.waiting_for_class_letter)
 
 
 @router.message(UserProfileState.waiting_for_class)
 async def process_class(message: Message, state: FSMContext):
     await state.update_data(class_number=message.text)
-    class_letter_buttons = [
-        [KeyboardButton(text="А"), KeyboardButton(text="Б")],
-        [KeyboardButton(text="В"), KeyboardButton(text="Г")]
-    ]
-
-    class_letter_kb = ReplyKeyboardMarkup(
-        keyboard=class_letter_buttons + skip_keyboard(), resize_keyboard=True)
-    await message.answer("Выберите букву вашего класса", reply_markup=class_letter_kb)
+    await message.answer("Выберите букву класса:", reply_markup=skip_kb("А", "Б", "В", "Г"))
     await state.set_state(UserProfileState.waiting_for_class_letter)
 
 
@@ -183,7 +157,7 @@ async def skip_class_letter(message: Message, state: FSMContext):
         "- Ссылка на ВКонтакте\n"
         "- Адрес электронной почты\n"
         "Или нажмите 'Пропустить':",
-        reply_markup=skip_keyboard()
+        reply_markup=skip_kb()
     )
     await state.set_state(UserProfileState.waiting_for_contact_info)
 
@@ -198,7 +172,7 @@ async def process_class_letter(message: Message, state: FSMContext):
         "- Ссылка на ВКонтакте\n"
         "- Адрес электронной почты\n"
         "Или нажмите 'Пропустить':",
-        reply_markup=skip_keyboard()
+        reply_markup=skip_kb()
     )
     await state.set_state(UserProfileState.waiting_for_contact_info)
 
@@ -211,7 +185,7 @@ async def process_contact_info(message: Message, state: FSMContext):
     user_data = await state.get_data()
     role = user_data['role']
     if role == "учитель":
-        await message.answer("Введите ваши предметы через запятую", reply_markup=skip_keyboard())
+        await message.answer("Введите ваши предметы через запятую", reply_markup=skip_kb())
         await state.set_state(UserProfileState.waiting_for_subjects)
     else:
         await save_user_profile(message, state)

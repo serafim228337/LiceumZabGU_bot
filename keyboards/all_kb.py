@@ -35,11 +35,14 @@ def catalog_kb():
     return keyboard
 
 
-def skip_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="Пропустить")],
-            [KeyboardButton(text="/cancel")]
-        ],
-        resize_keyboard=True
-    )
+def skip_kb(*buttons) -> ReplyKeyboardMarkup:
+    skip_button = KeyboardButton(text="Пропустить")
+    cancel_button = KeyboardButton(text="/cancel")
+
+    keyboard = [[skip_button], [cancel_button]]
+
+
+    if buttons:
+        keyboard = [[KeyboardButton(text=btn)] for btn in buttons] + keyboard
+
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
