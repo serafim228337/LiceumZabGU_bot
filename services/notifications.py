@@ -15,22 +15,22 @@ logger = logging.getLogger(__name__)
 JST = pytz.timezone('Asia/Tokyo')
 
 
-async def send_event_reminders(bot: Bot):
-    """Функция для отправки напоминаний о событиях."""
+async def send_event_reminders(bot: Bot) -> bool:
+    """Функция для отправки напоминаний о событиях (автоматическая рассылка).
+       Возвращает True, если напоминания отправлены, иначе False."""
     async for db in get_db():
         try:
-            # Текущее время в UTC
+            # Текущее время в UTC и конвертация в JST
             now = datetime.utcnow().replace(tzinfo=pytz.utc)
-            # Конвертируем текущее время в часовой пояс JST (GMT+9)
             jst_time = now.astimezone(JST)
 
-            # Устанавливаем время напоминания на 20:00 по GMT+9
+            # Устанавливаем время напоминания на 20:00 по JST
             reminder_time = jst_time.replace(hour=20, minute=0, second=0, microsecond=0)
 
             if jst_time >= reminder_time and jst_time < reminder_time + timedelta(days=1):
                 reminder_time = jst_time  # Отправляем в 20:00 текущего дня
 
-            # Получаем события, которые начнутся через сутки
+            # Получаем события, которые начнутся через сутки (определяется диапазоном времени)
             events = await db.execute(
                 select(Event).where(
                     Event.date.between(
@@ -43,7 +43,7 @@ async def send_event_reminders(bot: Bot):
 
             if not events:
                 logger.info("Нет событий для напоминания.")
-                return
+                return False
 
             # Получаем все группы из базы данных
             groups = await db.execute(select(Group))
@@ -62,18 +62,20 @@ async def send_event_reminders(bot: Bot):
                     except Exception as e:
                         logger.error(f"Ошибка отправки уведомления группе {group.group_name}: {e}")
 
+            return True
+
         except Exception as e:
             logger.error(f"Ошибка при выполнении функции send_event_reminders: {e}")
+            return False
 
 
-async def send_forced_event_reminders(bot: Bot):
-    """Функция для принудительной рассылки напоминаний."""
+async def send_forced_event_reminders(bot: Bot) -> bool:
+    """Функция для принудительной рассылки напоминаний.
+       Если событий на завтра нет, возвращает False, иначе – True."""
     async for db in get_db():
         try:
             now = datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(JST)
-
             start_of_tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-
             end_of_tomorrow = start_of_tomorrow + timedelta(days=1, microseconds=-1)
 
             # Получаем события, которые начнутся завтра
@@ -89,7 +91,7 @@ async def send_forced_event_reminders(bot: Bot):
 
             if not events:
                 logger.info("Нет событий для напоминания.")
-                return
+                return False
 
             # Получаем все группы из базы данных
             groups = await db.execute(select(Group))
@@ -108,5 +110,8 @@ async def send_forced_event_reminders(bot: Bot):
                     except Exception as e:
                         logger.error(f"Ошибка отправки уведомления группе {group.group_name}: {e}")
 
+            return True
+
         except Exception as e:
             logger.error(f"Ошибка при выполнении функции send_forced_event_reminders: {e}")
+            return False
