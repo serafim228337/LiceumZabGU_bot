@@ -1,3 +1,4 @@
+from datetime import datetime  # Для поля created_at
 from sqlalchemy import Column, BigInteger, String, DateTime, Boolean, Integer
 from database.db import Base
 
@@ -12,6 +13,7 @@ class User(Base):
     class_letter = Column(String(1), index=True)
     contact_info = Column(String(255), nullable=True)
     role = Column(String(50), nullable=True)
+    subjects = Column(String(255), nullable=True)
 
 
     def __repr__(self):
@@ -40,3 +42,12 @@ class Event(Base):
     def __repr__(self):
         return f"<Event {self.title} ({self.date})>"
 
+
+class AdminLog(Base):
+    __tablename__ = 'admin_logs'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    admin_id = Column(BigInteger, nullable=False)  # ID администратора
+    action = Column(String(100), nullable=False)  # Тип действия (например, "add_event")
+    details = Column(String(500), nullable=True)  # Дополнительные детали
+    created_at = Column(DateTime, default=datetime.now)  # Время действия

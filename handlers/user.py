@@ -1,12 +1,13 @@
 import logging
-from datetime import datetime
 
 from aiogram import Router, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from sqlalchemy import select
+from sqlalchemy.testing.plugin.plugin_base import config
 
+from config.config import schedule_link
 from database.db import get_db
 from database.models import Event, User
 from keyboards.all_kb import main_kb, catalog_kb
@@ -17,6 +18,14 @@ router = Router()
 logger = logging.getLogger(__name__)
 router = Router()
 
+import datetime
+
+def get_week_type(date=None):
+    """Определяет, верхняя или нижняя неделя."""
+    if date is None:
+        date = datetime.date.today()
+    week_number = date.isocalendar()[1]  # Номер недели в году
+    return "верхняя" if week_number % 2 == 0 else "нижняя"
 
 @router.message(Command("start"))
 async def start(message: Message):
@@ -37,22 +46,15 @@ async def start(message: Message):
             reply_markup=main_kb(message.from_user.id)
         )
 
-
 @router.message(Command("schedule"))
-async def send_schedule_link(message: Message):
-    schedule_link = "https://docs.google.com/spreadsheets/d/1SRjuZqP3x1WuEytURp3_-2glduMnRepcRNXF0t5fzZg/edit?gid=0#gid=0"
-    await message.answer(
-        "📅 Расписание уроков доступно по ссылке:\n"
-        f"{schedule_link}"
-    )
-
-
 @router.message(F.text == "📅 Расписание")
 async def send_schedule_link_text(message: Message):
-    schedule_link = "https://docs.google.com/spreadsheets/d/1SRjuZqP3x1WuEytURp3_-2glduMnRepcRNXF0t5fzZg/edit?gid=0#gid=0"
+    week_type = get_week_type()
+
     await message.answer(
-        "📅 Расписание уроков доступно по ссылке:\n"
-        f"{schedule_link}"
+        f"*🗓️ Текущая неделя: {week_type.upper()}*\n"
+        f"[Открыть расписание 📅]({schedule_link})",
+        parse_mode="MarkdownV2"
     )
 
 
@@ -75,29 +77,10 @@ async def show_catalog(message: Message):
 
 
 @router.message(Command("events"))
-async def show_events(message: Message):
-    async for db in get_db():
-        events = await db.execute(select(Event).where(Event.date >= datetime.now()).order_by(Event.date))
-        events = events.scalars().all()
-
-        if not events:
-            await message.answer("Предстоящих событий нет.")
-            return
-
-        response = "Предстоящие события:\n"
-        for event in events:
-            response += (
-                f"📅 {event.title}\n"
-                f"📝 {event.description}\n"
-                f"⏰ {event.date.strftime('%Y-%m-%d %H:%M')}\n\n"
-            )
-        await message.answer(response)
-
-
 @router.message(F.text == "Предстоящие события")
 async def show_events_text(message: Message):
     async for db in get_db():
-        events = await db.execute(select(Event).where(Event.date >= datetime.now()).order_by(Event.date))
+        events = await db.execute(select(Event).where(Event.date >= datetime.datetime.now()).order_by(Event.date))
         events = events.scalars().all()
 
         if not events:

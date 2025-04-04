@@ -5,7 +5,8 @@ def admin_panel():
     admin_kb_list = [
         [KeyboardButton(text="Добавить группу"), KeyboardButton(text="Список групп")],
         [KeyboardButton(text="Разослать сообщение"), KeyboardButton(text="Добавить событие")],
-        [KeyboardButton(text="Разослать уведомление о предстоящем событии"), KeyboardButton(text="На главную")]
+        [KeyboardButton(text="Разослать уведомление о предстоящем событии"), KeyboardButton(text="Просмотр логов")],
+        [KeyboardButton(text="Очистить логи"), KeyboardButton(text="На главную")]
     ]
     admin_kb = ReplyKeyboardMarkup(
         keyboard=admin_kb_list,

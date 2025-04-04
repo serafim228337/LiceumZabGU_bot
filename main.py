@@ -1,7 +1,8 @@
 import os
 import os.path
 from functools import partial
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from services.log_cleaner import clean_old_logs
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.enums import UpdateType
@@ -40,6 +41,13 @@ async def main():
         partial(send_event_reminders, bot),
         trigger="interval",
         hours=1,  # Проверка каждые 1 час
+    )
+    scheduler.add_job(
+        clean_old_logs,
+        'cron',
+        hour=3,
+        minute=0,
+        kwargs={'days_to_keep': 90}  # Храним логи 90 дней
     )
     scheduler.start()
 

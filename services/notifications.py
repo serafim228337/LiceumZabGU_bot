@@ -16,36 +16,35 @@ JST = pytz.timezone('Asia/Tokyo')
 
 
 async def send_event_reminders(bot: Bot) -> bool:
-    """Функция для отправки напоминаний о событиях (автоматическая рассылка).
-       Возвращает True, если напоминания отправлены, иначе False."""
+    """Функция для отправки напоминаний о событиях завтрашнего дня (рассылается в 20:00 JST)."""
     async for db in get_db():
         try:
-            # Текущее время в UTC и конвертация в JST
-            now = datetime.utcnow().replace(tzinfo=pytz.utc)
-            jst_time = now.astimezone(JST)
+            # Текущее время в JST
+            now = datetime.now(JST)
 
-            # Устанавливаем время напоминания на 20:00 по JST
-            reminder_time = jst_time.replace(hour=20, minute=0, second=0, microsecond=0)
+            # Проверяем, что сейчас ~20:00 (допуск 5 минут)
+            if now.hour != 20 or now.minute > 5:
+                logger.info("Сейчас не время для отправки напоминаний (не 20:00 JST).")
+                return False
 
-            if jst_time >= reminder_time and jst_time < reminder_time + timedelta(days=1):
-                reminder_time = jst_time  # Отправляем в 20:00 текущего дня
+            # Определяем начало и конец завтрашнего дня
+            tomorrow = now + timedelta(days=1)
+            start_of_tomorrow = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_of_tomorrow = start_of_tomorrow + timedelta(days=1, microseconds=-1)
 
-            # Получаем события, которые начнутся через сутки (определяется диапазоном времени)
+            # Получаем все события, которые начнутся завтра
             events = await db.execute(
                 select(Event).where(
-                    Event.date.between(
-                        reminder_time - timedelta(days=1),
-                        reminder_time - timedelta(days=1, minutes=1)
-                    )
+                    Event.date.between(start_of_tomorrow, end_of_tomorrow)
                 )
             )
             events = events.scalars().all()
 
             if not events:
-                logger.info("Нет событий для напоминания.")
+                logger.info("Нет событий для напоминания на завтра.")
                 return False
 
-            # Получаем все группы из базы данных
+            # Получаем все группы
             groups = await db.execute(select(Group))
             groups = groups.scalars().all()
 
@@ -54,7 +53,7 @@ async def send_event_reminders(bot: Bot) -> bool:
                     try:
                         await bot.send_message(
                             chat_id=group.chat_id,
-                            text=f"⏰ Напоминание: событие '{event.title}' начнётся через сутки!\n"
+                            text=f"⏰ Напоминание: событие '{event.title}' состоится завтра!\n"
                                  f"📅 Дата: {event.date.strftime('%Y-%m-%d %H:%M')}\n"
                                  f"📝 Описание: {event.description}"
                         )
