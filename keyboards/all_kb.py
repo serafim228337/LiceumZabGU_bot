@@ -1,23 +1,36 @@
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+from aiogram.enums import ChatType
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
 
 from filters.is_admin import admins
 
 
-def main_kb(user_telegram_id: int):
+def should_disable_keyboard(chat_type: ChatType, command: str = None) -> bool:
+    """Определяет, нужно ли отключать клавиатуру"""
+    allowed_commands = ['/events', '/schedule']
+    if command in allowed_commands:
+        return False
+    return chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]
+
+
+def main_kb(user_telegram_id: int, chat_type: ChatType = None):
+    if chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        return ReplyKeyboardRemove()
+
     kb_list = [
         [KeyboardButton(text="О наc"), KeyboardButton(text="👤 Профиль")],
         [KeyboardButton(text="Каталог")],
         [KeyboardButton(text="📅 Расписание")]
     ]
+
     if user_telegram_id in admins:
         kb_list.append([KeyboardButton(text="⚙️ Админ панель")])
-    keyboard = ReplyKeyboardMarkup(
+
+    return ReplyKeyboardMarkup(
         keyboard=kb_list,
         resize_keyboard=True,
         one_time_keyboard=True,
         input_field_placeholder="Воспользуйтесь меню:"
     )
-    return keyboard
 
 
 def catalog_kb():
@@ -40,7 +53,6 @@ def skip_kb(*buttons) -> ReplyKeyboardMarkup:
     cancel_button = KeyboardButton(text="/cancel")
 
     keyboard = [[skip_button], [cancel_button]]
-
 
     if buttons:
         keyboard = [[KeyboardButton(text=btn)] for btn in buttons] + keyboard

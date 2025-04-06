@@ -1,7 +1,11 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.enums import ChatType
 
+def admin_panel(chat_type: ChatType = None):
+    # Не показываем админ-панель в группах
+    if chat_type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+        return None
 
-def admin_panel():
     admin_kb_list = [
         [KeyboardButton(text="Добавить группу"), KeyboardButton(text="Список групп")],
         [KeyboardButton(text="Разослать сообщение"), KeyboardButton(text="Добавить событие")],

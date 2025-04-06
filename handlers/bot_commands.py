@@ -9,10 +9,8 @@ logger = logging.getLogger(__name__)
 
 # Команды для пользователей
 user_commands = [
-    BotCommand(command="start", description="Начать работу с ботом"),
     BotCommand(command="schedule", description="Посмотреть расписание"),
-    BotCommand(command="events", description="Посмотреть события"),
-    BotCommand(command="help", description="Получить справку")
+    BotCommand(command="events", description="Посмотреть события")
 ]
 
 # Команды для администраторов

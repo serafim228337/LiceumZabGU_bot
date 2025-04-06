@@ -1,9 +1,10 @@
 import logging
 
 from aiogram import Router, F
+from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove
 from sqlalchemy import select
 from sqlalchemy.testing.plugin.plugin_base import config
 
@@ -13,10 +14,11 @@ from database.models import Event, User
 from keyboards.all_kb import main_kb, catalog_kb
 from services.db_operations import get_user_by_id, add_user_to_db
 
-router = Router()
+
 
 logger = logging.getLogger(__name__)
 router = Router()
+router.message.filter(F.chat.type == ChatType.PRIVATE)
 
 import datetime
 
@@ -43,10 +45,9 @@ async def start(message: Message):
 
         await message.answer(
             response,
-            reply_markup=main_kb(message.from_user.id)
+            reply_markup=main_kb(message.from_user.id, message.chat.type)
         )
 
-@router.message(Command("schedule"))
 @router.message(F.text == "📅 Расписание")
 async def send_schedule_link_text(message: Message):
     week_type = get_week_type()
@@ -57,6 +58,16 @@ async def send_schedule_link_text(message: Message):
         parse_mode="MarkdownV2"
     )
 
+
+@router.message(Command("schedule"))
+async def send_schedule_link(message: Message):
+    week_type = get_week_type()
+
+    await message.answer(
+        f"*🗓️ Текущая неделя: {week_type.upper()}*\n"
+        f"[Открыть расписание 📅]({schedule_link})",
+        parse_mode="MarkdownV2"
+    )
 
 @router.message(F.text == "О наc")
 async def about_us(message: Message):
@@ -78,7 +89,7 @@ async def show_catalog(message: Message):
 
 @router.message(Command("events"))
 @router.message(F.text == "Предстоящие события")
-async def show_events_text(message: Message):
+async def show_events(message: Message):
     async for db in get_db():
         events = await db.execute(select(Event).where(Event.date >= datetime.datetime.now()).order_by(Event.date))
         events = events.scalars().all()
@@ -94,7 +105,10 @@ async def show_events_text(message: Message):
                 f"📝 {event.description}\n"
                 f"⏰ {event.date.strftime('%Y-%m-%d %H:%M')}\n\n"
             )
-        await message.answer(response)
+        await message.answer(
+            response,
+            reply_markup=main_kb(message.from_user.id, message.chat.type, '/events')
+        )
 
 
 @router.message(F.text == "Учителя")
@@ -119,4 +133,7 @@ async def teachers_list(message: Message):
 @router.message(F.text == "Главное меню")
 async def return_to_main_menu(message: Message, state: FSMContext):
     await state.clear()
-    await message.answer("Главное меню", reply_markup=main_kb(message.from_user.id))
+    await message.answer(
+        "Главное меню",
+        reply_markup=main_kb(message.from_user.id, message.chat.type)
+    )

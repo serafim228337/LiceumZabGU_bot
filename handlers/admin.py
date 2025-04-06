@@ -51,7 +51,11 @@ async def admin_panel_handler(message: Message, state: FSMContext):
         await message.answer("Доступ запрещён!")
         return
 
-    await message.answer("Админ-панель:", reply_markup=admin_panel())
+    kb = admin_panel(message.chat.type)
+    if kb:
+        await message.answer("Админ-панель:", reply_markup=kb)
+    else:
+        await message.answer("Админ-панель недоступна в групповых чатах")
 
 
 @router.message(F.text == "Разослать уведомление о предстоящем событии")
@@ -397,7 +401,7 @@ async def clean_logs_command(message: Message):
         return await message.answer("Доступ запрещён!")
 
     try:
-        days = 30  # Можно сделать параметром команды
+        days = 0  # Можно сделать параметром команды
         deleted_count = await clean_old_logs(days)
         await message.answer(f"Очистка логов завершена. Удалено записей: {deleted_count}")
     except Exception as e:
