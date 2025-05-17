@@ -36,6 +36,7 @@ def main_kb(user_telegram_id: int, chat_type: ChatType = None):
 def catalog_kb():
     kb_list = [
         [KeyboardButton(text="Учителя")],
+        [KeyboardButton(text="Погода в Чите")],
         [KeyboardButton(text="Предстоящие события")],
         [KeyboardButton(text="Главное меню")]
     ]

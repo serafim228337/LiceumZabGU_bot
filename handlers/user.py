@@ -4,17 +4,15 @@ from aiogram import Router, F
 from aiogram.enums import ChatType
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ReplyKeyboardRemove
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from sqlalchemy import select
-from sqlalchemy.testing.plugin.plugin_base import config
 
 from config.config import schedule_link
 from database.db import get_db
 from database.models import Event, User
 from keyboards.all_kb import main_kb, catalog_kb
 from services.db_operations import get_user_by_id, add_user_to_db
-
-
+from services.weather import get_weather
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -22,12 +20,14 @@ router.message.filter(F.chat.type == ChatType.PRIVATE)
 
 import datetime
 
+
 def get_week_type(date=None):
     """Определяет, верхняя или нижняя неделя."""
     if date is None:
         date = datetime.date.today()
     week_number = date.isocalendar()[1]  # Номер недели в году
     return "верхняя" if week_number % 2 == 0 else "нижняя"
+
 
 @router.message(Command("start"))
 async def start(message: Message):
@@ -47,6 +47,7 @@ async def start(message: Message):
             response,
             reply_markup=main_kb(message.from_user.id, message.chat.type)
         )
+
 
 @router.message(F.text == "📅 Расписание")
 async def send_schedule_link_text(message: Message):
@@ -68,6 +69,7 @@ async def send_schedule_link(message: Message):
         f"[Открыть расписание 📅]({schedule_link})",
         parse_mode="MarkdownV2"
     )
+
 
 @router.message(F.text == "О наc")
 async def about_us(message: Message):
@@ -107,7 +109,7 @@ async def show_events(message: Message):
             )
         await message.answer(
             response,
-            reply_markup=main_kb(message.from_user.id, message.chat.type, '/events')
+            reply_markup=main_kb(message.from_user.id, message.chat.type)
         )
 
 
@@ -137,3 +139,9 @@ async def return_to_main_menu(message: Message, state: FSMContext):
         "Главное меню",
         reply_markup=main_kb(message.from_user.id, message.chat.type)
     )
+
+
+@router.message(F.text == "Погода в Чите")
+async def show_weather(message: Message):
+    weather = await get_weather()
+    await message.answer(weather)
